@@ -8,9 +8,10 @@ from app.schemas.query import QueryRequest, QueryResponse, Source
 from app.services.chroma_service import get_chroma_service
 from app.services.groq_service import get_groq_service
 from app.services.backblaze_service import get_backblaze_service
+from app.services.auth_service import get_current_user
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/query", tags=["query"])
+router = APIRouter(prefix="/query", tags=["query"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("", response_model=QueryResponse)

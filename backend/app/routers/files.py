@@ -7,10 +7,11 @@ from app.models.database import get_db
 from app.schemas.file import FileUploadResponse, FileResponse, FileListResponse, FileDeleteResponse
 from app.services.file_service import get_file_service
 from app.services.backblaze_service import get_backblaze_service
+from app.services.auth_service import get_current_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(prefix="/files", tags=["files"], dependencies=[Depends(get_current_user)])
 
 
 def get_authorized_url(file_record, backblaze_service) -> str:
