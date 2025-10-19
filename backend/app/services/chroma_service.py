@@ -124,6 +124,62 @@ class ChromaService:
             logger.error(f"Failed to query collection: {str(e)}")
             raise
 
+    def query_specific_collections(
+        self,
+        collection_ids: List[str],
+        query_text: str,
+        n_results_per_collection: int = 3
+    ) -> List[Dict[str, Any]]:
+        """
+        Query across specific collections (user-specific).
+
+        Args:
+            collection_ids: List of collection IDs to query
+            query_text: Query text
+            n_results_per_collection: Number of results per collection
+
+        Returns:
+            List of results from specified collections
+        """
+        try:
+            all_results = []
+
+            for collection_id in collection_ids:
+                try:
+                    collection = self.client.get_collection(name=collection_id)
+                    results = collection.query(
+                        query_texts=[query_text],
+                        n_results=n_results_per_collection
+                    )
+
+                    # Add collection name to metadata
+                    if results and results.get('documents'):
+                        for i in range(len(results['documents'][0])):
+                            all_results.append({
+                                'document': results['documents'][0][i],
+                                'metadata': results['metadatas'][0][i] if results.get('metadatas') else {},
+                                'distance': results['distances'][0][i] if results.get('distances') else None,
+                                'id': results['ids'][0][i] if results.get('ids') else None,
+                                'collection': collection.name
+                            })
+
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to query collection {collection_id}: {str(e)}")
+                    continue
+
+            # Sort by distance (lower is better)
+            all_results.sort(
+                key=lambda x: x['distance'] if x['distance'] is not None else float('inf'))
+
+            logger.info(
+                f"Queried {len(collection_ids)} collections, found {len(all_results)} results")
+            return all_results
+
+        except Exception as e:
+            logger.error(f"Failed to query specific collections: {str(e)}")
+            raise
+
     def query_all_collections(
         self,
         query_text: str,

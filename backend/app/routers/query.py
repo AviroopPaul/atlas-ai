@@ -4,10 +4,12 @@ import logging
 
 from app.models.database import get_db
 from app.models.file import File
+from app.models.user import User
 from app.schemas.query import QueryRequest, QueryResponse, Source
 from app.services.chroma_service import get_chroma_service
 from app.services.groq_service import get_groq_service
 from app.services.backblaze_service import get_backblaze_service
+from app.services.auth_service import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/query", tags=["query"])
@@ -16,7 +18,8 @@ router = APIRouter(prefix="/query", tags=["query"])
 @router.post("", response_model=QueryResponse)
 async def query_documents(
     request: QueryRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Query documents using natural language.
@@ -32,15 +35,16 @@ async def query_documents(
         groq_service = get_groq_service()
         backblaze_service = get_backblaze_service()
 
-        # Get all files for intent detection
-        all_files = db.query(File).all()
-        if not all_files:
+        # Get only the current user's files for intent detection
+        user_files = db.query(File).filter(
+            File.user_id == current_user.id).all()
+        if not user_files:
             raise HTTPException(
                 status_code=404,
                 detail="No files have been uploaded yet. Please upload files first."
             )
 
-        file_names = [f.original_name for f in all_files]
+        file_names = [f.original_name for f in user_files]
 
         # Step 1: Detect query intent
         logger.info(f"Detecting intent for query: {request.query}")
@@ -51,9 +55,11 @@ async def query_documents(
 
         logger.info(f"Detected intent: {intent}, target_file: {target_file}")
 
-        # Step 2: Search ChromaDB for relevant chunks
+        # Step 2: Search ChromaDB for relevant chunks (only user's collections)
         logger.info("Querying ChromaDB for relevant content")
-        results = chroma_service.query_all_collections(
+        user_collection_ids = [f.chroma_collection_id for f in user_files]
+        results = chroma_service.query_specific_collections(
+            collection_ids=user_collection_ids,
             query_text=request.query,
             n_results_per_collection=3
         )
@@ -69,8 +75,8 @@ async def query_documents(
         file_urls = {}
 
         if intent == "file_retrieval":
-            # Build URL mapping for files with fresh authorized URLs
-            for file in all_files:
+            # Build URL mapping for user's files with fresh authorized URLs
+            for file in user_files:
                 try:
                     # Generate fresh authorized URL (valid for 1 hour)
                     authorized_url = backblaze_service.get_download_url(
@@ -85,7 +91,7 @@ async def query_documents(
             # If specific file was identified, prioritize it
             if target_file:
                 matching_file = next(
-                    (f for f in all_files if target_file.lower() in f.original_name.lower()), None)
+                    (f for f in user_files if target_file.lower() in f.original_name.lower()), None)
                 if matching_file:
                     try:
                         authorized_url = backblaze_service.get_download_url(

@@ -7,6 +7,8 @@ from app.models.database import get_db
 from app.schemas.file import FileUploadResponse, FileResponse, FileListResponse, FileDeleteResponse
 from app.services.file_service import get_file_service
 from app.services.backblaze_service import get_backblaze_service
+from app.services.auth_service import get_current_user
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,8 @@ def get_file_response_with_auth_url(file_record, backblaze_service) -> FileRespo
 @router.post("/upload", response_model=FileUploadResponse, status_code=201)
 async def upload_file(
     file: UploadFile = FastAPIFile(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Upload a file.
@@ -59,7 +62,7 @@ async def upload_file(
     """
     file_service = get_file_service()
     backblaze_service = get_backblaze_service()
-    file_record = file_service.upload_file(file, db)
+    file_record = file_service.upload_file(file, db, current_user.id)
 
     # Generate fresh authorized URL
     authorized_url = get_authorized_url(file_record, backblaze_service)
@@ -79,7 +82,8 @@ async def upload_file(
 @router.get("/{file_id}", response_model=FileResponse)
 async def get_file(
     file_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get file metadata and download URL by ID.
@@ -87,21 +91,22 @@ async def get_file(
     """
     file_service = get_file_service()
     backblaze_service = get_backblaze_service()
-    file_record = file_service.get_file(file_id, db)
+    file_record = file_service.get_file(file_id, db, current_user.id)
     return get_file_response_with_auth_url(file_record, backblaze_service)
 
 
 @router.get("/", response_model=FileListResponse)
 async def list_files(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
-    List all uploaded files.
+    List all uploaded files for the authenticated user.
     Returns fresh authorized download URLs valid for 1 hour.
     """
     file_service = get_file_service()
     backblaze_service = get_backblaze_service()
-    files = file_service.list_files(db)
+    files = file_service.list_files(db, current_user.id)
 
     # Convert each file to response with fresh authorized URL
     file_responses = [
@@ -115,10 +120,11 @@ async def list_files(
 @router.delete("/{file_id}", response_model=FileDeleteResponse)
 async def delete_file(
     file_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Delete a file.
+    Delete a file owned by the authenticated user.
 
     This will:
     1. Delete the file from Backblaze B2
@@ -126,7 +132,7 @@ async def delete_file(
     3. Delete the database record
     """
     file_service = get_file_service()
-    file_record = file_service.delete_file(file_id, db)
+    file_record = file_service.delete_file(file_id, db, current_user.id)
 
     return FileDeleteResponse(
         message="File deleted successfully",

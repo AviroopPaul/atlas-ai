@@ -8,7 +8,9 @@ from pathlib import Path
 
 from app.config.settings import get_settings
 from app.models.database import init_db
+from app.models import user as user_models  # noqa: F401 ensure models are imported
 from app.routers import files, query
+from app.routers import auth as auth_router
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +49,31 @@ async def startup_event():
     try:
         init_db()
         logger.info("Database initialized successfully")
+        # Optionally seed an admin user for development
+        try:
+            from sqlalchemy.orm import Session
+            from app.models.database import SessionLocal
+            from app.models.user import User
+            from app.config.settings import get_settings
+            from app.services.auth_service import hash_password
+
+            settings_local = get_settings()
+            if settings_local.seed_admin_email and settings_local.seed_admin_password:
+                db: Session = SessionLocal()
+                try:
+                    existing = db.query(User).filter(User.email == settings_local.seed_admin_email).first()
+                    if not existing:
+                        user = User(
+                            email=settings_local.seed_admin_email,
+                            hashed_password=hash_password(settings_local.seed_admin_password),
+                        )
+                        db.add(user)
+                        db.commit()
+                        logger.info("Seeded admin user %s", settings_local.seed_admin_email)
+                finally:
+                    db.close()
+        except Exception as se:
+            logger.warning("Admin seeding skipped: %s", se)
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
         raise
@@ -64,6 +91,7 @@ async def health_check():
 
 
 # Include routers
+app.include_router(auth_router.router, prefix=settings.api_prefix)
 app.include_router(files.router, prefix=settings.api_prefix)
 app.include_router(query.router, prefix=settings.api_prefix)
 

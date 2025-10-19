@@ -17,6 +17,16 @@ class Settings(BaseSettings):
     # API settings
     api_prefix: str = "/api/v1"
 
+    # Auth/JWT settings
+    jwt_secret_key: str = "change-me-in-prod"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+
+    # Optional admin seeding (for local/dev convenience)
+    seed_admin_email: str | None = None
+    seed_admin_password: str | None = None
+
     # Groq API settings
     groq_api_key: str
     # Available models: llama-3.3-70b-versatile, llama-3.1-8b-instant, gemma2-9b-it
