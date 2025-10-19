@@ -46,7 +46,12 @@ export const useChatStore = create((set, get) => ({
       });
       set({ messages: formattedMessages, isLoadingConversation: false });
     } catch (error) {
-      set({ isLoadingConversation: false });
+      // Clear the conversation ID on failure to maintain consistent state
+      set({
+        isLoadingConversation: false,
+        currentConversationId: null,
+        messages: [],
+      });
       throw error;
     }
   },
