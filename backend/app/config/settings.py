@@ -1,0 +1,62 @@
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+from typing import List
+
+
+class Settings(BaseSettings):
+    """Application settings."""
+
+    # Application settings
+    app_name: str = "My Stuff AI API"
+    app_version: str = "1.0.0"
+    debug: bool = True
+
+    # Database settings
+    database_url: str = "sqlite:///./app.db"
+
+    # API settings
+    api_prefix: str = "/api/v1"
+
+    # Groq API settings
+    groq_api_key: str
+    # Available models: llama-3.3-70b-versatile, llama-3.1-8b-instant, gemma2-9b-it
+    groq_model: str = "llama-3.3-70b-versatile"
+
+    # Backblaze B2 settings
+    backblaze_application_key: str
+    backblaze_key_id: str
+    backblaze_key_name: str
+    backblaze_bucket_name: str  # You'll need to add this
+
+    # ChromaDB Cloud settings
+    chroma_tenant: str
+    chroma_database: str
+    chroma_api_key: str
+
+    # File upload settings
+    max_file_size_mb: int = 50
+    allowed_extensions: str = "pdf,docx,doc,txt,csv,xlsx,xls"
+
+    # Text chunking settings
+    chunk_size: int = 500
+    chunk_overlap: int = 50
+
+    @property
+    def allowed_extensions_list(self) -> List[str]:
+        """Get allowed extensions as a list."""
+        return [ext.strip() for ext in self.allowed_extensions.split(",")]
+
+    @property
+    def max_file_size_bytes(self) -> int:
+        """Get max file size in bytes."""
+        return self.max_file_size_mb * 1024 * 1024
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()
