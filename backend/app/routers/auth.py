@@ -11,12 +11,15 @@ from app.services.auth_service import (
     decode_token,
     create_user,
 )
+from app.config.settings import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse)
 async def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    settings = get_settings()
+
     # Check if user already exists
     existing_user = get_user_by_email(payload.email, db)
     if existing_user:
@@ -35,12 +38,14 @@ async def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        expires_in=60 * 30
+        expires_in=settings.access_token_expire_minutes * 60
     )
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    settings = get_settings()
+
     user = get_user_by_email(payload.email, db)
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
@@ -48,11 +53,17 @@ async def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
     access_token = create_access_token(subject=user.email)
     refresh_token = create_refresh_token(subject=user.email)
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token, expires_in=60 * 30)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=settings.access_token_expire_minutes * 60
+    )
 
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_tokens(body: RefreshRequest):
+    settings = get_settings()
+
     payload = decode_token(body.refresh_token)
 
     if payload.get("type") != "refresh":
@@ -66,4 +77,8 @@ async def refresh_tokens(body: RefreshRequest):
 
     access_token = create_access_token(subject=email)
     # For simplicity, return same refresh token until rotation is needed
-    return TokenResponse(access_token=access_token, refresh_token=body.refresh_token, expires_in=60 * 30)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=body.refresh_token,
+        expires_in=settings.access_token_expire_minutes * 60
+    )
