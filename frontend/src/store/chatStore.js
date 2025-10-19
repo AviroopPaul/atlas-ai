@@ -19,13 +19,31 @@ export const useChatStore = create((set, get) => ({
     try {
       const messages = await getConversationMessages(conversationId);
       // Transform backend messages to frontend format
-      const formattedMessages = messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-        sources: msg.sources ? JSON.parse(msg.sources) : null,
-        intent: msg.intent,
-        created_at: msg.created_at,
-      }));
+      const formattedMessages = messages.map((msg) => {
+        let sources = null;
+        if (msg.sources) {
+          // If sources is already an object, use it directly
+          if (typeof msg.sources === "object") {
+            sources = msg.sources;
+          } else if (typeof msg.sources === "string") {
+            // If it's a string, try to parse it
+            try {
+              sources = JSON.parse(msg.sources);
+            } catch (parseError) {
+              console.error("Failed to parse sources:", parseError);
+              sources = null;
+            }
+          }
+        }
+
+        return {
+          role: msg.role,
+          content: msg.content,
+          sources,
+          intent: msg.intent,
+          created_at: msg.created_at,
+        };
+      });
       set({ messages: formattedMessages, isLoadingConversation: false });
     } catch (error) {
       set({ isLoadingConversation: false });
