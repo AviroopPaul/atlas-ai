@@ -8,6 +8,8 @@ class QueryRequest(BaseModel):
     query: str
     # List of {"role": "user"/"assistant", "content": "..."}
     chat_history: List[Dict[str, str]]
+    # Optional: link to existing conversation
+    conversation_id: Optional[int] = None
 
 
 class Source(BaseModel):
@@ -24,3 +26,4 @@ class QueryResponse(BaseModel):
     markdown_response: str
     sources: List[Source]
     intent: str  # "file_retrieval" or "information_query"
+    conversation_id: Optional[int] = None  # ID of conversation if saved

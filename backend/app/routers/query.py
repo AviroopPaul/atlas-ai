@@ -5,11 +5,13 @@ import logging
 from app.models.database import get_db
 from app.models.file import File
 from app.models.user import User
+from app.models.conversation import Conversation, Message
 from app.schemas.query import QueryRequest, QueryResponse, Source
 from app.services.chroma_service import get_chroma_service
 from app.services.groq_service import get_groq_service
 from app.services.backblaze_service import get_backblaze_service
 from app.services.auth_service import get_current_user
+import json
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/query", tags=["query"])
@@ -130,10 +132,66 @@ async def query_documents(
                 if most_relevant.get('distance') is not None else None
             ))
 
+        # Step 6: Save to database if conversation_id provided or create new one
+        conversation_id = request.conversation_id
+
+        if conversation_id:
+            # Verify conversation belongs to user
+            conversation = db.query(Conversation).filter(
+                Conversation.id == conversation_id,
+                Conversation.user_id == current_user.id
+            ).first()
+
+            if not conversation:
+                logger.warning(
+                    f"Conversation {conversation_id} not found for user {current_user.id}")
+                conversation_id = None
+
+        # Create new conversation if none exists
+        if not conversation_id:
+            conversation = Conversation(
+                user_id=current_user.id,
+                title=request.query[:50] +
+                "..." if len(request.query) > 50 else request.query
+            )
+            db.add(conversation)
+            db.commit()
+            db.refresh(conversation)
+            conversation_id = conversation.id
+            logger.info(f"Created new conversation {conversation_id}")
+
+        # Save user message
+        user_message = Message(
+            conversation_id=conversation_id,
+            role="user",
+            content=request.query
+        )
+        db.add(user_message)
+
+        # Save assistant message
+        sources_json = json.dumps([{
+            "filename": s.filename,
+            "chunk_id": s.chunk_id,
+            "relevance_score": s.relevance_score
+        } for s in sources]) if sources else None
+
+        assistant_message = Message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=markdown_response,
+            sources=sources_json,
+            intent=intent
+        )
+        db.add(assistant_message)
+        db.commit()
+
+        logger.info(f"Saved messages to conversation {conversation_id}")
+
         return QueryResponse(
             markdown_response=markdown_response,
             sources=sources,
-            intent=intent
+            intent=intent,
+            conversation_id=conversation_id
         )
 
     except HTTPException:
