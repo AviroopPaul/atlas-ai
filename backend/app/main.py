@@ -72,15 +72,20 @@ app.include_router(query.router, prefix=settings.api_prefix)
 frontend_dist_path = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
 if frontend_dist_path.exists():
-    # Serve static assets
+    # Serve static assets from /assets directory
     app.mount(
         "/assets", StaticFiles(directory=str(frontend_dist_path / "assets")), name="assets")
 
-    # Catch-all route to serve React app for SPA routing
+    # Catch-all route to serve React app for SPA routing and root-level static files
     @app.get("/{full_path:path}")
     async def serve_react_app(full_path: str):
-        """Serve React app for all non-API routes."""
-        # Serve index.html for all routes (SPA)
+        """Serve React app for all non-API routes and static files."""
+        # Check if the requested file exists in dist root (for images, vite.svg, etc.)
+        file_path = frontend_dist_path / full_path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+
+        # Otherwise serve index.html for SPA routing
         index_path = frontend_dist_path / "index.html"
         if index_path.exists():
             return FileResponse(str(index_path))
