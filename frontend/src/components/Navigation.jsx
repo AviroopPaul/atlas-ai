@@ -1,5 +1,8 @@
 import { NavLink } from "react-router-dom";
 import styled from "styled-components";
+import { IoLogOutOutline } from "react-icons/io5";
+import { useAuthStore } from "../store/authStore";
+import ConversationList from "./ConversationList";
 
 const SidebarContainer = styled.div`
   position: relative;
@@ -113,7 +116,49 @@ const NavList = styled.div`
   display: flex;
   flex-direction: column;
   padding: ${(props) => props.theme.spacing.md} 0;
+`;
+
+const ConversationsSection = styled.div`
   flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const NavFooter = styled.div``;
+
+const LogoutButton = styled.button`
+  width: 100%;
+  padding: ${(props) => props.theme.spacing.lg};
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: ${(props) => props.theme.colors.white};
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: ${(props) => (props.$isCollapsed ? "center" : "flex-start")};
+  gap: ${(props) => props.theme.spacing.md};
+  border: none;
+  border-left: 4px solid transparent;
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: ${(props) => props.theme.colors.gray[900]};
+    border-left-color: ${(props) => props.theme.colors.white};
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  span {
+    display: ${(props) => (props.$isCollapsed ? "none" : "inline")};
+  }
 `;
 
 const NavItem = styled(NavLink)`
@@ -153,6 +198,18 @@ const NavItem = styled(NavLink)`
 `;
 
 function Navigation({ isCollapsed, onToggle }) {
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = async () => {
+    const confirmed = window.confirm("Are you sure you want to logout?");
+    if (confirmed) {
+      // Clear all state and logout
+      logout();
+      // Force a page reload to ensure clean state
+      window.location.href = "/login";
+    }
+  };
+
   return (
     <>
       <MobileOverlay $isCollapsed={isCollapsed} onClick={onToggle} />
@@ -195,23 +252,6 @@ function Navigation({ isCollapsed, onToggle }) {
           </Header>
 
           <NavList>
-            <NavItem to="/" $isCollapsed={isCollapsed}>
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <span>Chat</span>
-            </NavItem>
-
             <NavItem to="/files" $isCollapsed={isCollapsed}>
               <svg
                 fill="none"
@@ -229,6 +269,17 @@ function Navigation({ isCollapsed, onToggle }) {
               <span>Files</span>
             </NavItem>
           </NavList>
+
+          <ConversationsSection>
+            <ConversationList isCollapsed={isCollapsed} onToggle={onToggle} />
+          </ConversationsSection>
+
+          <NavFooter>
+            <LogoutButton onClick={handleLogout} $isCollapsed={isCollapsed}>
+              <IoLogOutOutline />
+              <span>Logout</span>
+            </LogoutButton>
+          </NavFooter>
         </Sidebar>
       </SidebarContainer>
     </>

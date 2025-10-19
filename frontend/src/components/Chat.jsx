@@ -141,27 +141,68 @@ const Button = styled.button`
   }
 `;
 
-const LoadingDots = styled.div`
-  display: inline-block;
+const LoadingIndicator = styled.div`
+  display: flex;
+  gap: ${(props) => props.theme.spacing.sm};
+  align-items: center;
 
-  &::after {
-    content: "...";
-    animation: dots 1.5s steps(4, end) infinite;
+  .dot {
+    width: 8px;
+    height: 8px;
+    background: ${(props) => props.theme.colors.white};
+    border-radius: 50%;
+    animation: pulse 1.4s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
   }
 
-  @keyframes dots {
+  @keyframes pulse {
     0%,
-    20% {
-      content: ".";
+    80%,
+    100% {
+      opacity: 0.3;
+      transform: scale(0.8);
     }
     40% {
-      content: "..";
-    }
-    60%,
-    100% {
-      content: "...";
+      opacity: 1;
+      transform: scale(1);
     }
   }
+`;
+
+const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: ${(props) => props.theme.spacing.xxl};
+  text-align: center;
+`;
+
+const EmptyStateIcon = styled.div`
+  font-size: 4rem;
+  margin-bottom: ${(props) => props.theme.spacing.lg};
+  color: ${(props) => props.theme.colors.gray[600]};
+`;
+
+const EmptyStateTitle = styled.h2`
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: ${(props) => props.theme.colors.white};
+  margin-bottom: ${(props) => props.theme.spacing.md};
+`;
+
+const EmptyStateText = styled.p`
+  font-size: 1rem;
+  color: ${(props) => props.theme.colors.gray[400]};
+  max-width: 400px;
 `;
 
 const ClearButton = styled.button`
@@ -192,8 +233,16 @@ const ClearButton = styled.button`
 function Chat({ onMenuClick }) {
   const messages = useChatStore((state) => state.messages);
   const isLoading = useChatStore((state) => state.isLoading);
+  const isLoadingConversation = useChatStore(
+    (state) => state.isLoadingConversation
+  );
   const sendQueryAction = useChatStore((state) => state.sendQuery);
-  const clearChat = useChatStore((state) => state.clearChat);
+  const startNewConversation = useChatStore(
+    (state) => state.startNewConversation
+  );
+  const currentConversationId = useChatStore(
+    (state) => state.currentConversationId
+  );
   const messagesEndRef = useRef(null);
   const [input, setInput] = useState("");
 
@@ -214,7 +263,7 @@ function Chat({ onMenuClick }) {
     setInput("");
 
     try {
-      await sendQueryAction(queryText);
+      await sendQueryAction(queryText, currentConversationId);
     } catch {
       // Error already handled in store
     }
@@ -224,65 +273,98 @@ function Chat({ onMenuClick }) {
     if (messages.length === 0) return;
 
     const confirmed = window.confirm(
-      "Are you sure you want to clear the chat? This will remove all messages."
+      "Are you sure you want to start a new conversation? This will clear the current chat."
     );
 
     if (confirmed) {
-      clearChat();
+      startNewConversation();
     }
   };
+
+  // Show empty state if no conversation is selected and no messages
+  if (!currentConversationId && messages.length === 0) {
+    return (
+      <ChatContainer>
+        <PageHeader title="Chat" onMenuClick={onMenuClick} />
+        <MessagesContainer>
+          <EmptyStateContainer>
+            <EmptyStateIcon>
+              <IoRocketOutline />
+            </EmptyStateIcon>
+            <EmptyStateTitle>Ask me anything</EmptyStateTitle>
+            <EmptyStateText>
+              Start a conversation by typing a message below. I can help you
+              with your documents, answer questions, and retrieve files.
+            </EmptyStateText>
+          </EmptyStateContainer>
+        </MessagesContainer>
+        <InputContainer onSubmit={handleSubmit}>
+          <Input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask me anything..."
+            disabled={isLoading}
+            autoFocus
+          />
+          <Button type="submit" disabled={isLoading || !input.trim()}>
+            <IoRocketOutline size={24} />
+          </Button>
+        </InputContainer>
+      </ChatContainer>
+    );
+  }
 
   return (
     <ChatContainer>
       <PageHeader title="Chat" onMenuClick={onMenuClick}>
         {messages.length > 0 && (
-          <ClearButton onClick={handleClearChat}>Clear Chat</ClearButton>
+          <ClearButton onClick={handleClearChat}>New Chat</ClearButton>
         )}
       </PageHeader>
 
       <MessagesContainer>
-        {messages.length === 0 && (
-          <Message>
-            <MessageHeader>System</MessageHeader>
-            <MessageContent>
-              Welcome! Ask me anything about your documents or request files.
-              <br />
-              <br />
-              Examples:
-              <ul>
-                <li>What is my current role?</li>
-                <li>Give me my resume</li>
-                <li>Summarize all my documents</li>
-              </ul>
-            </MessageContent>
-          </Message>
+        {isLoadingConversation ? (
+          <EmptyStateContainer>
+            <LoadingIndicator>
+              <div className="dot" />
+              <div className="dot" />
+              <div className="dot" />
+            </LoadingIndicator>
+          </EmptyStateContainer>
+        ) : (
+          <>
+            {messages.map((msg, idx) => (
+              <Message key={idx} isUser={msg.role === "user"}>
+                <MessageHeader>
+                  {msg.role === "user" ? "You" : "Assistant"}
+                </MessageHeader>
+                <MessageContent>
+                  {msg.role === "user" ? (
+                    msg.content
+                  ) : (
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  )}
+                </MessageContent>
+              </Message>
+            ))}
+
+            {isLoading && (
+              <Message>
+                <MessageHeader>Assistant</MessageHeader>
+                <MessageContent>
+                  <LoadingIndicator>
+                    <div className="dot" />
+                    <div className="dot" />
+                    <div className="dot" />
+                  </LoadingIndicator>
+                </MessageContent>
+              </Message>
+            )}
+
+            <div ref={messagesEndRef} />
+          </>
         )}
-
-        {messages.map((msg, idx) => (
-          <Message key={idx} isUser={msg.role === "user"}>
-            <MessageHeader>
-              {msg.role === "user" ? "You" : "Assistant"}
-            </MessageHeader>
-            <MessageContent>
-              {msg.role === "user" ? (
-                msg.content
-              ) : (
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-              )}
-            </MessageContent>
-          </Message>
-        ))}
-
-        {isLoading && (
-          <Message>
-            <MessageHeader>Assistant</MessageHeader>
-            <MessageContent>
-              <LoadingDots>Thinking</LoadingDots>
-            </MessageContent>
-          </Message>
-        )}
-
-        <div ref={messagesEndRef} />
       </MessagesContainer>
 
       <InputContainer onSubmit={handleSubmit}>
@@ -291,9 +373,12 @@ function Chat({ onMenuClick }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask me anything..."
-          disabled={isLoading}
+          disabled={isLoading || isLoadingConversation}
         />
-        <Button type="submit" disabled={isLoading || !input.trim()}>
+        <Button
+          type="submit"
+          disabled={isLoading || isLoadingConversation || !input.trim()}
+        >
           <IoRocketOutline size={24} />
         </Button>
       </InputContainer>
