@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  my-stuff-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my-stuff-ai
+    ports:
+      - "8000:8000"
+    environment:
+      # Application settings
+      - DEBUG=false
+
+      # Groq API settings
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+
+      # Backblaze B2 settings
+      - BACKBLAZE_APPLICATION_KEY=${BACKBLAZE_APPLICATION_KEY}
+      - BACKBLAZE_KEY_ID=${BACKBLAZE_KEY_ID}
+      - BACKBLAZE_KEY_NAME=${BACKBLAZE_KEY_NAME}
+      - BACKBLAZE_BUCKET_NAME=${BACKBLAZE_BUCKET_NAME}
+
+      # ChromaDB Cloud settings
+      - CHROMA_TENANT=${CHROMA_TENANT}
+      - CHROMA_DATABASE=${CHROMA_DATABASE}
+      - CHROMA_API_KEY=${CHROMA_API_KEY}
+
+      # File upload settings (optional)
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - ALLOWED_EXTENSIONS=${ALLOWED_EXTENSIONS:-pdf,docx,doc,txt,csv,xlsx,xls}
+
+      # Text chunking settings (optional)
+      - CHUNK_SIZE=${CHUNK_SIZE:-500}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-50}
+
+    volumes:
+      # Persist database using named volume
+      - db-data:/app/backend
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  db-data:

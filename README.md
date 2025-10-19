@@ -46,6 +46,46 @@ A full-stack RAG (Retrieval-Augmented Generation) powered chatbot for querying p
 
 ## Quick Start
 
+### 🐳 Docker Deployment (Recommended)
+
+The easiest way to run My Stuff AI is using Docker. This method requires no manual setup of Python or Node.js.
+
+**Prerequisites:**
+
+- Docker and Docker Compose installed
+- API credentials (Groq, Backblaze B2, ChromaDB)
+
+**Steps:**
+
+1. Create a `.env` file in the root directory with your credentials:
+
+```env
+GROQ_API_KEY=your_groq_key
+BACKBLAZE_APPLICATION_KEY=your_key
+BACKBLAZE_KEY_ID=your_key_id
+BACKBLAZE_KEY_NAME=your_key_name
+BACKBLAZE_BUCKET_NAME=your_bucket
+CHROMA_TENANT=your_tenant
+CHROMA_DATABASE=your_database
+CHROMA_API_KEY=your_chroma_key
+```
+
+2. Start the application:
+
+```bash
+docker-compose up -d
+```
+
+3. Access the app at http://localhost:8000
+
+For detailed Docker instructions, see [DOCKER.md](./DOCKER.md).
+
+---
+
+### Manual Setup
+
+If you prefer to run without Docker:
+
 ### Prerequisites
 
 - Python 3.12

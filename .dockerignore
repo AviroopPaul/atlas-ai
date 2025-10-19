@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+README.md
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/.npm
+frontend/.eslintcache
+
+# Backend
+backend/venv
+backend/__pycache__
+backend/**/__pycache__
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+backend/.Python
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
+backend/.pytest_cache
+backend/.coverage
+backend/htmlcov
+backend/.env.example
+
+# Database (should be mounted as volume)
+backend/app.db
+backend/*.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs
+
+# OS
+Thumbs.db
+
