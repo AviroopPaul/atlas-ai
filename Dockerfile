@@ -8,8 +8,14 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 
-# Copy frontend source code and build
+# Copy frontend source
 COPY frontend/ ./
+
+# Build argument for API URL (will be passed from Railway env)
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+# Build the frontend with the environment variable
 RUN npm run build
 
 # Stage 2: Setup Python backend and serve application
