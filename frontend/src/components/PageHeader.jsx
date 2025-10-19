@@ -1,5 +1,6 @@
 import styled from "styled-components";
 
+// Wrapper for mobile centering: overlay invisible placeholders for menu and right section
 const HeaderContainer = styled.header`
   padding: ${(props) => props.theme.spacing.lg};
   border-bottom: 2px solid ${(props) => props.theme.colors.white};
@@ -7,11 +8,12 @@ const HeaderContainer = styled.header`
   align-items: center;
   gap: ${(props) => props.theme.spacing.md};
   position: relative;
-  min-height: 76px;
+  height: 80px;
 
   @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
     padding: ${(props) => props.theme.spacing.md};
-    min-height: 60px;
+    height: 60px;
+    gap: 0;
   }
 `;
 
@@ -43,6 +45,18 @@ const MenuButton = styled.button`
   }
 `;
 
+// This helper makes a visually-hidden placeholder with equal width to MenuButton and RightSection on mobile
+const Placeholder = styled.div`
+  width: 44px;
+  height: 44px;
+  display: none;
+
+  @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
+    display: flex;
+    flex-shrink: 0;
+  }
+`;
+
 const Title = styled.h1`
   font-size: 1.5rem;
   font-weight: 700;
@@ -52,6 +66,7 @@ const Title = styled.h1`
 
   @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
     font-size: 1.25rem;
+    text-align: center;
   }
 `;
 
@@ -84,8 +99,11 @@ function PageHeader({ title, children, onMenuClick }) {
           />
         </svg>
       </MenuButton>
-      <Title>{title}</Title>
+      <Title>{typeof title === "string" ? title.toLowerCase() : title}</Title>
       <RightSection $hideOnMobile={!children}>{children}</RightSection>
+      {/* Add invisible placeholders left/right on mobile to center the title */}
+      <Placeholder aria-hidden="true" />
+      <Placeholder aria-hidden="true" style={{ position: "absolute", left: 0, visibility: "hidden" }} />
     </HeaderContainer>
   );
 }
