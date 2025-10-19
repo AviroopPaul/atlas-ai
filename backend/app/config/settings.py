@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     debug: bool = True
 
     # Database settings
+    # For SQLite (local dev): sqlite:///./app.db
+    # For Supabase: postgresql://user:password@host:port/database
     database_url: str = "sqlite:///./app.db"
 
     # API settings

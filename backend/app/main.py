@@ -9,7 +9,8 @@ from pathlib import Path
 from app.config.settings import get_settings
 from app.models.database import init_db
 from app.models import user as user_models  # noqa: F401 ensure models are imported
-from app.routers import files, query
+from app.models import conversation as conversation_models  # noqa: F401 ensure models are imported
+from app.routers import files, query, conversations
 from app.routers import auth as auth_router
 
 # Configure logging
@@ -61,15 +62,18 @@ async def startup_event():
             if settings_local.seed_admin_email and settings_local.seed_admin_password:
                 db: Session = SessionLocal()
                 try:
-                    existing = db.query(User).filter(User.email == settings_local.seed_admin_email).first()
+                    existing = db.query(User).filter(
+                        User.email == settings_local.seed_admin_email).first()
                     if not existing:
                         user = User(
                             email=settings_local.seed_admin_email,
-                            hashed_password=hash_password(settings_local.seed_admin_password),
+                            hashed_password=hash_password(
+                                settings_local.seed_admin_password),
                         )
                         db.add(user)
                         db.commit()
-                        logger.info("Seeded admin user %s", settings_local.seed_admin_email)
+                        logger.info("Seeded admin user %s",
+                                    settings_local.seed_admin_email)
                 finally:
                     db.close()
         except Exception as se:
@@ -94,6 +98,7 @@ async def health_check():
 app.include_router(auth_router.router, prefix=settings.api_prefix)
 app.include_router(files.router, prefix=settings.api_prefix)
 app.include_router(query.router, prefix=settings.api_prefix)
+app.include_router(conversations.router, prefix=settings.api_prefix)
 
 
 # Mount static files for React frontend
