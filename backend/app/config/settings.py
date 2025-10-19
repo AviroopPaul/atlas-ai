@@ -41,6 +41,14 @@ class Settings(BaseSettings):
     chunk_size: int = 500
     chunk_overlap: int = 50
 
+    # CORS settings
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,https://atlas-ai-production.up.railway.app"
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Get CORS origins as a list."""
+        return [origin.strip() for origin in self.cors_origins.split(",")]
+
     @property
     def allowed_extensions_list(self) -> List[str]:
         """Get allowed extensions as a list."""
