@@ -27,6 +27,20 @@ const Sidebar = styled.nav`
   }
 `;
 
+const TitleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+  }
+`;
+
 const Header = styled.div`
   padding: ${(props) => props.theme.spacing.lg};
   border-bottom: 2px solid ${(props) => props.theme.colors.white};
@@ -34,7 +48,12 @@ const Header = styled.div`
   align-items: center;
   justify-content: ${(props) =>
     props.$isCollapsed ? "center" : "space-between"};
-  min-height: 76px;
+  height: 80px;
+
+  @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
+    padding: ${(props) => props.theme.spacing.md};
+    height: 60px;
+  }
 
   h2 {
     font-size: 1.25rem;
@@ -43,6 +62,9 @@ const Header = styled.div`
     white-space: nowrap;
     opacity: ${(props) => (props.$isCollapsed ? "0" : "1")};
     transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 `;
 
@@ -138,7 +160,14 @@ function Navigation({ isCollapsed, onToggle }) {
       <SidebarContainer>
         <Sidebar $isCollapsed={isCollapsed}>
           <Header $isCollapsed={isCollapsed}>
-            {!isCollapsed && <h2>My Stuff AI</h2>}
+            {!isCollapsed && (
+              <h2>
+                <TitleContainer>
+                  <img src="/atlas-ai.png" alt="Atlas AI logo" />
+                  <span>atlas ai</span>
+                </TitleContainer>
+              </h2>
+            )}
             <ToggleButton onClick={onToggle}>
               <svg
                 fill="none"

@@ -269,7 +269,7 @@ function FilesDashboard({ onMenuClick }) {
         accept=".pdf,.docx,.doc,.txt,.csv,.xlsx,.xls"
       />
 
-      <PageHeader title="Files Dashboard" onMenuClick={onMenuClick}>
+      <PageHeader title="Files" onMenuClick={onMenuClick}>
         <UploadSection>
           <Button as="label" htmlFor="file-upload" disabled={isUploading}>
             {isUploading ? "Uploading..." : "Upload File"}

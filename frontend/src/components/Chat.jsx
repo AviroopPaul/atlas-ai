@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import ReactMarkdown from "react-markdown";
+import { IoRocketOutline } from "react-icons/io5";
 import { useChatStore } from "../store/chatStore";
 import PageHeader from "./PageHeader";
 
@@ -293,7 +294,7 @@ function Chat({ onMenuClick }) {
           disabled={isLoading}
         />
         <Button type="submit" disabled={isLoading || !input.trim()}>
-          Send
+          <IoRocketOutline size={24} />
         </Button>
       </InputContainer>
     </ChatContainer>
