@@ -17,6 +17,10 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(plain_password: str) -> str:
+    # Bcrypt has a 72 byte limit, truncate if necessary
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        plain_password = password_bytes[:72].decode('utf-8', errors='ignore')
     return _password_context.hash(plain_password)
 
 
@@ -49,35 +53,52 @@ def decode_token(token: str, verify_exp: bool = True) -> dict:
     settings = get_settings()
     try:
         options = {"verify_exp": verify_exp}
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm], options=options)
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[
+                             settings.jwt_algorithm], options=options)
         return payload
     except JWTError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials") from e
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Could not validate credentials") from e
 
 
 def get_user_by_email(email: str, db: Session) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
 
 
+def create_user(email: str, password: str, db: Session) -> User:
+    """Create a new user with hashed password."""
+    hashed_password = hash_password(password)
+    user = User(email=email, hashed_password=hashed_password)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+        _bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
     if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     token = credentials.credentials
     payload = decode_token(token)
 
     if payload.get("type") != "access":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
 
     email = payload.get("sub")
     if email is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
     user = get_user_by_email(email, db)
     if user is None or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
 
     return user

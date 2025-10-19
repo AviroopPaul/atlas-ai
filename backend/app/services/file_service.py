@@ -23,7 +23,7 @@ class FileService:
         self.doc_processor = get_document_processor()
         self.chroma = get_chroma_service()
 
-    def upload_file(self, upload_file: UploadFile, db: Session) -> File:
+    def upload_file(self, upload_file: UploadFile, db: Session, user_id: int) -> File:
         """
         Upload file and process it through the complete pipeline.
 
@@ -37,6 +37,7 @@ class FileService:
         Args:
             upload_file: FastAPI UploadFile object
             db: Database session
+            user_id: ID of the user uploading the file
 
         Returns:
             File model instance
@@ -109,7 +110,8 @@ class FileService:
                 backblaze_url=backblaze_url,
                 backblaze_file_id=backblaze_file_id,
                 chroma_collection_id=collection_name,
-                is_processed=True
+                is_processed=True,
+                user_id=user_id
             )
 
             db.add(file_record)
@@ -142,22 +144,29 @@ class FileService:
             raise HTTPException(
                 status_code=500, detail=f"Failed to upload file: {str(e)}")
 
-    def delete_file(self, file_id: int, db: Session) -> File:
+    def delete_file(self, file_id: int, db: Session, user_id: int) -> File:
         """
         Delete file and all associated data.
 
         Args:
             file_id: Database file ID
             db: Database session
+            user_id: ID of the user requesting deletion
 
         Returns:
             Deleted File model instance
         """
         try:
-            # Get file record
-            file_record = db.query(File).filter(File.id == file_id).first()
+            # Get file record and verify ownership
+            file_record = db.query(File).filter(
+                File.id == file_id,
+                File.user_id == user_id
+            ).first()
             if not file_record:
-                raise HTTPException(status_code=404, detail="File not found")
+                raise HTTPException(
+                    status_code=404,
+                    detail="File not found or you don't have permission to delete it"
+                )
 
             # Delete from Backblaze
             logger.info(f"Deleting file from B2: {file_record.filename}")
@@ -192,33 +201,43 @@ class FileService:
             raise HTTPException(
                 status_code=500, detail=f"Failed to delete file: {str(e)}")
 
-    def get_file(self, file_id: int, db: Session) -> File:
+    def get_file(self, file_id: int, db: Session, user_id: int) -> File:
         """
         Get file by ID.
 
         Args:
             file_id: Database file ID
             db: Database session
+            user_id: ID of the user requesting the file
 
         Returns:
             File model instance
         """
-        file_record = db.query(File).filter(File.id == file_id).first()
+        file_record = db.query(File).filter(
+            File.id == file_id,
+            File.user_id == user_id
+        ).first()
         if not file_record:
-            raise HTTPException(status_code=404, detail="File not found")
+            raise HTTPException(
+                status_code=404,
+                detail="File not found or you don't have permission to access it"
+            )
         return file_record
 
-    def list_files(self, db: Session) -> List[File]:
+    def list_files(self, db: Session, user_id: int) -> List[File]:
         """
         List all files.
 
         Args:
             db: Database session
+            user_id: ID of the user requesting the files
 
         Returns:
-            List of File model instances
+            List of File model instances owned by the user
         """
-        return db.query(File).order_by(File.upload_date.desc()).all()
+        return db.query(File).filter(
+            File.user_id == user_id
+        ).order_by(File.upload_date.desc()).all()
 
     def _validate_file(self, upload_file: UploadFile):
         """

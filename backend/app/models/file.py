@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.models.database import Base
 
@@ -18,6 +19,11 @@ class File(Base):
     chroma_collection_id = Column(String, nullable=False)
     upload_date = Column(DateTime, default=datetime.utcnow)
     is_processed = Column(Boolean, default=False)
+    user_id = Column(Integer, ForeignKey("users.id"),
+                     nullable=False, index=True)
+
+    # Relationship to User
+    user = relationship("User", backref="files")
 
     def __repr__(self):
-        return f"<File(id={self.id}, filename={self.filename}, original_name={self.original_name})>"
+        return f"<File(id={self.id}, filename={self.filename}, original_name={self.original_name}, user_id={self.user_id})>"
