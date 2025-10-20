@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { IoLogOutOutline } from "react-icons/io5";
 import { useAuthStore } from "../store/authStore";
 import ConversationList from "./ConversationList";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 const SidebarContainer = styled.div`
   position: relative;
@@ -14,19 +15,51 @@ const Sidebar = styled.nav`
   left: 0;
   top: 0;
   bottom: 0;
-  width: ${(props) => (props.$isCollapsed ? "60px" : "240px")};
+  width: ${(props) => {
+    if (props.$isCollapsed) return "60px";
+    return `${props.$width}px`;
+  }};
   background: ${(props) => props.theme.colors.black};
   border-right: 2px solid ${(props) => props.theme.colors.white};
   display: flex;
   flex-direction: column;
-  transition: width 0.3s ease;
+  transition: ${(props) => props.$isResizing ? "none" : "width 0.3s ease"};
   z-index: 1000;
   overflow: hidden;
+  min-width: 200px;
+  max-width: 500px;
 
   @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
     width: ${(props) => (props.$isCollapsed ? "0" : "240px")};
     border-right: ${(props) =>
       props.$isCollapsed ? "none" : "2px solid white"};
+    min-width: unset;
+    max-width: unset;
+  }
+`;
+
+const ResizeHandle = styled.div`
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 1001;
+  
+  &:hover {
+    background: ${(props) => props.theme.colors.white};
+    opacity: 0.3;
+  }
+
+  &:active {
+    background: ${(props) => props.theme.colors.white};
+    opacity: 0.5;
+  }
+
+  @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
+    display: none;
   }
 `;
 
@@ -207,9 +240,11 @@ const NavItem = styled(NavLink)`
   }
 `;
 
-function Navigation({ isCollapsed, onToggle }) {
+function Navigation({ isCollapsed, onToggle, width = 240, onWidthChange, onResizeStateChange }) {
   const logout = useAuthStore((state) => state.logout);
   const userEmail = useAuthStore((state) => state.user?.email);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef(null);
 
   const handleLogout = async () => {
     const confirmed = window.confirm("Are you sure you want to logout?");
@@ -221,12 +256,56 @@ function Navigation({ isCollapsed, onToggle }) {
     }
   };
 
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsResizing(true);
+    onResizeStateChange?.(true);
+  }, [onResizeStateChange]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing) return;
+    
+    const newWidth = e.clientX;
+    const minWidth = 200;
+    const maxWidth = 500;
+    
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      onWidthChange?.(newWidth);
+    }
+  }, [isResizing, onWidthChange]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+    onResizeStateChange?.(false);
+  }, [onResizeStateChange]);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
   return (
     <>
       <MobileOverlay $isCollapsed={isCollapsed} onClick={onToggle} />
 
       <SidebarContainer>
-        <Sidebar $isCollapsed={isCollapsed}>
+        <Sidebar 
+          ref={sidebarRef}
+          $isCollapsed={isCollapsed} 
+          $width={width}
+          $isResizing={isResizing}
+        >
           <Header $isCollapsed={isCollapsed}>
             {!isCollapsed && (
               <h2>
@@ -296,6 +375,12 @@ function Navigation({ isCollapsed, onToggle }) {
               <span>Logout</span>
             </LogoutButton>
           </NavFooter>
+          
+          {!isCollapsed && (
+            <ResizeHandle
+              onMouseDown={handleMouseDown}
+            />
+          )}
         </Sidebar>
       </SidebarContainer>
     </>
