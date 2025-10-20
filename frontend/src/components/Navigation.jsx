@@ -161,6 +161,16 @@ const LogoutButton = styled.button`
   }
 `;
 
+const UserEmail = styled.div`
+  padding: ${(props) => props.theme.spacing.lg};
+  color: ${(props) => props.theme.colors.gray[400]};
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: ${(props) => (props.$isCollapsed ? "none" : "block")};
+`;
+
 const NavItem = styled(NavLink)`
   padding: ${(props) => props.theme.spacing.lg};
   font-weight: 700;
@@ -199,6 +209,7 @@ const NavItem = styled(NavLink)`
 
 function Navigation({ isCollapsed, onToggle }) {
   const logout = useAuthStore((state) => state.logout);
+  const userEmail = useAuthStore((state) => state.user?.email);
 
   const handleLogout = async () => {
     const confirmed = window.confirm("Are you sure you want to logout?");
@@ -275,6 +286,11 @@ function Navigation({ isCollapsed, onToggle }) {
           </ConversationsSection>
 
           <NavFooter>
+            {userEmail && (
+              <UserEmail $isCollapsed={isCollapsed} title={userEmail}>
+                {userEmail}
+              </UserEmail>
+            )}
             <LogoutButton onClick={handleLogout} $isCollapsed={isCollapsed}>
               <IoLogOutOutline />
               <span>Logout</span>
