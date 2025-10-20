@@ -23,18 +23,14 @@ const Sidebar = styled.nav`
   border-right: 2px solid ${(props) => props.theme.colors.white};
   display: flex;
   flex-direction: column;
-  transition: ${(props) => props.$isResizing ? "none" : "width 0.3s ease"};
+  transition: ${(props) => (props.$isResizing ? "none" : "width 0.3s ease")};
   z-index: 1000;
   overflow: hidden;
-  min-width: 200px;
-  max-width: 500px;
 
   @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
     width: ${(props) => (props.$isCollapsed ? "0" : "240px")};
     border-right: ${(props) =>
       props.$isCollapsed ? "none" : "2px solid white"};
-    min-width: unset;
-    max-width: unset;
   }
 `;
 
@@ -47,7 +43,7 @@ const ResizeHandle = styled.div`
   cursor: col-resize;
   background: transparent;
   z-index: 1001;
-  
+
   &:hover {
     background: ${(props) => props.theme.colors.white};
     opacity: 0.3;
@@ -240,7 +236,13 @@ const NavItem = styled(NavLink)`
   }
 `;
 
-function Navigation({ isCollapsed, onToggle, width = 240, onWidthChange, onResizeStateChange }) {
+function Navigation({
+  isCollapsed,
+  onToggle,
+  width = 240,
+  onWidthChange,
+  onResizeStateChange,
+}) {
   const logout = useAuthStore((state) => state.logout);
   const userEmail = useAuthStore((state) => state.user?.email);
   const [isResizing, setIsResizing] = useState(false);
@@ -256,23 +258,29 @@ function Navigation({ isCollapsed, onToggle, width = 240, onWidthChange, onResiz
     }
   };
 
-  const handleMouseDown = useCallback((e) => {
-    e.preventDefault();
-    setIsResizing(true);
-    onResizeStateChange?.(true);
-  }, [onResizeStateChange]);
+  const handleMouseDown = useCallback(
+    (e) => {
+      e.preventDefault();
+      setIsResizing(true);
+      onResizeStateChange?.(true);
+    },
+    [onResizeStateChange]
+  );
 
-  const handleMouseMove = useCallback((e) => {
-    if (!isResizing) return;
-    
-    const newWidth = e.clientX;
-    const minWidth = 200;
-    const maxWidth = 500;
-    
-    if (newWidth >= minWidth && newWidth <= maxWidth) {
-      onWidthChange?.(newWidth);
-    }
-  }, [isResizing, onWidthChange]);
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!isResizing) return;
+
+      const newWidth = e.clientX;
+      const minWidth = 280;
+      const maxWidth = 500;
+
+      // Clamp the width between min and max
+      const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+      onWidthChange?.(clampedWidth);
+    },
+    [isResizing, onWidthChange]
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
@@ -281,16 +289,16 @@ function Navigation({ isCollapsed, onToggle, width = 240, onWidthChange, onResiz
 
   useEffect(() => {
     if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       };
     }
   }, [isResizing, handleMouseMove, handleMouseUp]);
@@ -300,45 +308,54 @@ function Navigation({ isCollapsed, onToggle, width = 240, onWidthChange, onResiz
       <MobileOverlay $isCollapsed={isCollapsed} onClick={onToggle} />
 
       <SidebarContainer>
-        <Sidebar 
+        <Sidebar
           ref={sidebarRef}
-          $isCollapsed={isCollapsed} 
+          $isCollapsed={isCollapsed}
           $width={width}
           $isResizing={isResizing}
         >
           <Header $isCollapsed={isCollapsed}>
-            {!isCollapsed && (
-              <h2>
-                <TitleContainer>
-                  <img src="/atlas-ai.png" alt="Atlas AI logo" />
-                  <span>atlas ai</span>
-                </TitleContainer>
-              </h2>
-            )}
-            <ToggleButton onClick={onToggle}>
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {isCollapsed ? (
+            {isCollapsed ? (
+              <ToggleButton onClick={onToggle} title="Expand sidebar">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2.5}
                     d="M9 5l7 7-7 7"
                   />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M15 19l-7-7 7-7"
-                  />
-                )}
-              </svg>
-            </ToggleButton>
+                </svg>
+              </ToggleButton>
+            ) : (
+              <>
+                <h2>
+                  <TitleContainer>
+                    <img src="/atlas-ai.png" alt="Atlas AI logo" />
+                    <span>atlas ai</span>
+                  </TitleContainer>
+                </h2>
+                <ToggleButton onClick={onToggle} title="Collapse sidebar">
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </ToggleButton>
+              </>
+            )}
           </Header>
 
           <NavList>
@@ -375,12 +392,8 @@ function Navigation({ isCollapsed, onToggle, width = 240, onWidthChange, onResiz
               <span>Logout</span>
             </LogoutButton>
           </NavFooter>
-          
-          {!isCollapsed && (
-            <ResizeHandle
-              onMouseDown={handleMouseDown}
-            />
-          )}
+
+          {!isCollapsed && <ResizeHandle onMouseDown={handleMouseDown} />}
         </Sidebar>
       </SidebarContainer>
     </>

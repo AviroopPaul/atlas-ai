@@ -27,6 +27,7 @@ const Header = styled.div`
   justify-content: ${(props) =>
     props.$isCollapsed ? "center" : "space-between"};
   gap: ${(props) => props.theme.spacing.md};
+  min-height: ${(props) => (props.$isCollapsed ? "120px" : "auto")};
 `;
 
 const Title = styled.h3`
@@ -40,24 +41,60 @@ const Title = styled.h3`
   gap: ${(props) => props.theme.spacing.sm};
 `;
 
-const ChatIcon = styled.button`
+const CollapsedButtonsContainer = styled.div`
   display: ${(props) => (props.$isCollapsed ? "flex" : "none")};
+  flex-direction: column;
+  gap: ${(props) => props.theme.spacing.sm};
+  align-items: center;
+`;
+
+const ChatIconButton = styled.button`
+  display: flex;
   align-items: center;
   justify-content: center;
-  color: ${(props) => props.theme.colors.white};
   background: transparent;
-  border: none;
-  cursor: pointer;
+  color: ${(props) => props.theme.colors.white};
+  border: 2px solid ${(props) => props.theme.colors.white};
+  width: 40px;
+  height: 40px;
   padding: 0;
-  transition: opacity 0.2s;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
 
   &:hover {
-    opacity: 0.7;
+    background: ${(props) => props.theme.colors.white};
+    color: ${(props) => props.theme.colors.black};
   }
 
   svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const NewChatButtonCollapsed = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${(props) => props.theme.colors.white};
+  color: ${(props) => props.theme.colors.black};
+  border: 2px solid ${(props) => props.theme.colors.white};
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: ${(props) => props.theme.colors.black};
+    color: ${(props) => props.theme.colors.white};
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
   }
 `;
 
@@ -90,6 +127,7 @@ const ConversationsList = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: ${(props) => props.theme.spacing.sm} 0;
+  display: ${(props) => (props.$isCollapsed ? "none" : "block")};
 `;
 
 const ConversationItem = styled.div`
@@ -283,13 +321,17 @@ function ConversationList({ isCollapsed, onToggle }) {
     <Container>
       <Header $isCollapsed={isCollapsed}>
         {isCollapsed ? (
-          <ChatIcon
-            $isCollapsed={isCollapsed}
-            onClick={onToggle}
-            title="Expand sidebar"
-          >
-            <IoChatbubblesOutline />
-          </ChatIcon>
+          <CollapsedButtonsContainer $isCollapsed={isCollapsed}>
+            <ChatIconButton onClick={onToggle} title="Expand to view chats">
+              <IoChatbubblesOutline />
+            </ChatIconButton>
+            <NewChatButtonCollapsed
+              onClick={handleNewChat}
+              title="New conversation"
+            >
+              <IoAddOutline />
+            </NewChatButtonCollapsed>
+          </CollapsedButtonsContainer>
         ) : (
           <>
             <Title>Chats</Title>
@@ -300,7 +342,7 @@ function ConversationList({ isCollapsed, onToggle }) {
         )}
       </Header>
 
-      <ConversationsList>
+      <ConversationsList $isCollapsed={isCollapsed}>
         {isLoading && conversations.length === 0 ? (
           <LoadingState>Loading...</LoadingState>
         ) : conversations.length === 0 ? (
