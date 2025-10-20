@@ -21,8 +21,11 @@ const AppContainer = styled.div`
 const ContentArea = styled.div`
   flex: 1;
   overflow: hidden;
-  margin-left: ${(props) => (props.$isCollapsed ? "60px" : "240px")};
-  transition: margin-left 0.3s ease;
+  margin-left: ${(props) => {
+    if (props.$isCollapsed) return "60px";
+    return `${props.$sidebarWidth}px`;
+  }};
+  transition: ${(props) => props.$isResizing ? "none" : "margin-left 0.3s ease"};
 
   @media (max-width: ${(props) => props.theme.breakpoints.mobile}) {
     margin-left: 0;
@@ -48,6 +51,27 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return window.innerWidth <= 768;
   });
+
+  // Initialize sidebar width from localStorage or default
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const savedWidth = localStorage.getItem('sidebarWidth');
+    return savedWidth ? parseInt(savedWidth, 10) : 240;
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Save sidebar width to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('sidebarWidth', sidebarWidth.toString());
+  }, [sidebarWidth]);
+
+  const handleSidebarWidthChange = (newWidth) => {
+    setSidebarWidth(newWidth);
+  };
+
+  const handleResizeStateChange = (resizing) => {
+    setIsResizing(resizing);
+  };
 
   // Clear all stores when authentication changes to false (logout)
   useEffect(() => {
@@ -87,8 +111,15 @@ function App() {
             <Navigation
               isCollapsed={isSidebarCollapsed}
               onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              width={sidebarWidth}
+              onWidthChange={handleSidebarWidthChange}
+              onResizeStateChange={handleResizeStateChange}
             />
-            <ContentArea $isCollapsed={isSidebarCollapsed}>
+            <ContentArea 
+              $isCollapsed={isSidebarCollapsed}
+              $sidebarWidth={sidebarWidth}
+              $isResizing={isResizing}
+            >
               <Routes>
                 <Route
                   path="/"
