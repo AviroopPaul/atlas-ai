@@ -8,6 +8,7 @@ import Navigation from "./components/Navigation";
 import Chat from "./components/Chat";
 import FilesDashboard from "./components/FilesDashboard";
 import Login from "./components/Login";
+import LandingPage from "./components/LandingPage";
 import { useAuthStore } from "./store/authStore";
 import { useChatStore } from "./store/chatStore";
 import { useConversationStore } from "./store/conversationStore";
@@ -103,8 +104,9 @@ function App() {
       <BrowserRouter>
         {!isAuthenticated ? (
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         ) : (
           <AppContainer>
