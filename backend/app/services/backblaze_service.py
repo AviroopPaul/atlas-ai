@@ -121,31 +121,6 @@ class BackblazeService:
             logger.error(f"Failed to get download URL: {str(e)}")
             raise
 
-    def download_file(self, file_name: str) -> bytes:
-        """
-        Download file content from Backblaze B2.
-
-        Args:
-            file_name: Name of the file
-
-        Returns:
-            File content as bytes
-        """
-        try:
-            bucket = self.b2_api.get_bucket_by_name(
-                settings.backblaze_bucket_name)
-
-            # Download file
-            downloaded_file = bucket.download_file_by_name(file_name)
-            file_content = downloaded_file.read()
-            
-            logger.info(f"Successfully downloaded file: {file_name}")
-            return file_content
-
-        except Exception as e:
-            logger.error(f"Failed to download file from B2: {str(e)}")
-            raise
-
 
 # Singleton instance
 _backblaze_service = None
