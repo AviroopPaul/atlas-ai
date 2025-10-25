@@ -199,20 +199,6 @@ function FilesDashboard({ onMenuClick }) {
     fetchFiles(); // Will use cache if valid
   }, [fetchFiles]);
 
-  // Auto-refresh when there are files being processed
-  useEffect(() => {
-    const hasUnprocessedFiles = files.some((file) => !file.is_processed);
-    
-    if (hasUnprocessedFiles) {
-      // Poll every 3 seconds when there are unprocessed files
-      const intervalId = setInterval(() => {
-        fetchFiles(true); // Force refresh
-      }, 3000);
-
-      return () => clearInterval(intervalId);
-    }
-  }, [files, fetchFiles]);
-
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -223,7 +209,7 @@ function FilesDashboard({ onMenuClick }) {
     try {
       await uploadFileAction(file);
       setStatusMessage({
-        text: `${file.name} uploaded! Processing in background...`,
+        text: `Successfully uploaded ${file.name}`,
         isError: false,
       });
     } catch (error) {
