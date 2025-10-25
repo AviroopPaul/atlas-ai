@@ -50,6 +50,12 @@ async def startup_event():
     try:
         init_db()
         logger.info("Database initialized successfully")
+        
+        # Start the file processing queue
+        from app.services.queue_service import get_queue_service
+        queue = get_queue_service()
+        logger.info("File processing queue started")
+        
         # Optionally seed an admin user for development
         try:
             from sqlalchemy.orm import Session
@@ -81,6 +87,19 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to initialize database: {str(e)}")
         raise
+
+
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown."""
+    logger.info("Shutting down application...")
+    try:
+        from app.services.queue_service import stop_queue_service
+        stop_queue_service()
+        logger.info("File processing queue stopped")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {str(e)}")
 
 
 # Health check endpoint
