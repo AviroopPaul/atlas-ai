@@ -9,6 +9,7 @@ from app.models.file import File
 from app.services.backblaze_service import get_backblaze_service
 from app.services.document_processor import get_document_processor
 from app.services.chroma_service import get_chroma_service
+from app.services.queue_service import get_queue_service
 from app.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -22,17 +23,22 @@ class FileService:
         self.backblaze = get_backblaze_service()
         self.doc_processor = get_document_processor()
         self.chroma = get_chroma_service()
+        self.queue = get_queue_service()
 
     def upload_file(self, upload_file: UploadFile, db: Session, user_id: int) -> File:
         """
-        Upload file and process it through the complete pipeline.
+        Upload file and queue it for processing.
 
-        Pipeline:
+        Steps:
         1. Validate file
         2. Upload to Backblaze B2
-        3. Extract text and chunk
-        4. Store in ChromaDB
-        5. Save metadata to database
+        3. Save metadata to database (with is_processed=False)
+        4. Queue for background processing
+
+        Background processing will:
+        - Extract text and chunk
+        - Store in ChromaDB
+        - Update is_processed=True
 
         Args:
             upload_file: FastAPI UploadFile object
@@ -40,10 +46,9 @@ class FileService:
             user_id: ID of the user uploading the file
 
         Returns:
-            File model instance
+            File model instance (with is_processed=False)
         """
         backblaze_file_id = None
-        collection_name = None
 
         try:
             # Step 1: Validate file
@@ -73,34 +78,10 @@ class FileService:
                 content_type=content_type
             )
 
-            # Step 3: Process document (extract and chunk text)
-            logger.info(f"Processing document: {unique_filename}")
-            metadata = {
-                "filename": original_name,
-                "file_type": file_type,
-                "file_size": file_size
-            }
-
-            chunks = self.doc_processor.process_document(
-                file_content=file_content,
-                file_type=file_type,
-                metadata=metadata
-            )
-
-            # Step 4: Store in ChromaDB
+            # Step 3: Create ChromaDB collection name (will be used later)
             collection_name = f"file_{uuid.uuid4().hex[:16]}"
-            logger.info(f"Storing in ChromaDB collection: {collection_name}")
 
-            chunk_texts = [chunk[0] for chunk in chunks]
-            chunk_metadatas = [chunk[1] for chunk in chunks]
-
-            self.chroma.add_documents(
-                collection_name=collection_name,
-                documents=chunk_texts,
-                metadatas=chunk_metadatas
-            )
-
-            # Step 5: Save to database
+            # Step 4: Save to database with is_processed=False
             logger.info(f"Saving file metadata to database")
             file_record = File(
                 filename=unique_filename,
@@ -110,7 +91,7 @@ class FileService:
                 backblaze_url=backblaze_url,
                 backblaze_file_id=backblaze_file_id,
                 chroma_collection_id=collection_name,
-                is_processed=True,
+                is_processed=False,
                 user_id=user_id
             )
 
@@ -118,12 +99,16 @@ class FileService:
             db.commit()
             db.refresh(file_record)
 
+            # Step 5: Queue for background processing
+            logger.info(f"Queuing file for processing: {original_name}")
+            self.queue.enqueue(file_record.id)
+
             logger.info(
-                f"Successfully uploaded and processed file: {original_name}")
+                f"Successfully uploaded file (queued for processing): {original_name}")
             return file_record
 
         except Exception as e:
-            logger.error(f"Error during file upload pipeline: {str(e)}")
+            logger.error(f"Error during file upload: {str(e)}")
 
             # Rollback: Clean up resources
             try:
@@ -131,13 +116,6 @@ class FileService:
                     logger.info("Rolling back: Deleting file from B2")
                     self.backblaze.delete_file_from_b2(
                         backblaze_file_id, unique_filename)
-            except:
-                pass
-
-            try:
-                if collection_name:
-                    logger.info("Rolling back: Deleting ChromaDB collection")
-                    self.chroma.delete_collection(collection_name)
             except:
                 pass
 
